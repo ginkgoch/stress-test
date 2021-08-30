@@ -27,8 +27,12 @@ var (
 	storeTalentObjects bool
 	delay              int
 	endless            bool
-	// gameID             string
-	games []string
+	gameID             string
+	games              []string
+	serverInfo         string
+	playerId           string
+	roomId             string
+	playGameOnly       bool
 )
 
 func init() {
@@ -43,6 +47,11 @@ func init() {
 	toCmd.PersistentFlags().StringArrayVarP(&games, "games", "g", []string{"competitive_math"}, `-g, game names, games are: competitive_math (default), ravens_matrices, push_pull, minimum_effort_airport, minimum_effort_airport_target`)
 	toCmd.PersistentFlags().BoolVarP(&storeTalentObjects, "storeTalentObjects", "s", false, "-s, default false")
 	toCmd.MarkFlagRequired("filepath")
+	toCmd.PersistentFlags().StringVarP(&serverInfo, "serverInfo", "", "", "--serverInfo")
+	toCmd.PersistentFlags().StringVarP(&gameID, "gameID", "", "competitive_math", "--gameID, default competitive_math")
+	toCmd.PersistentFlags().StringVarP(&playerId, "playerId", "", "", "--playerId")
+	toCmd.PersistentFlags().StringVarP(&roomId, "roomId", "", "", "--roomId, default competitive_math")
+	toCmd.PersistentFlags().BoolVarP(&playGameOnly, "playGameOnly", "", true, "--playGameOnly, default true")
 
 	toCmd.Example = "stress-test talent -f ~/Downloads/2W-user.json"
 
@@ -149,6 +158,12 @@ func executeStressTest(userList []*talent.TalentObject, httpClient *http.Client)
 			debugErr := executeSingleTask(user, httpClient, nil)
 			return debugErr
 		})
+	} else if playGameOnly {
+		s.RunMultiTasksWithRateLimiter("talent", rateLimiter, func(ch chan<- *runner.TaskResult) error {
+			debugErr := executeSingleTaskPlayGame()
+			return debugErr
+		})
+
 	} else {
 		s.RunMultiTasksWithRateLimiter("talent", rateLimiter, func(ch chan<- *runner.TaskResult) error {
 			tmpIndex := atomic.AddUint32(&index, 1)
@@ -250,6 +265,17 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 		i = currentIndex
 	}
 
+	return
+}
+
+func executeSingleTaskPlayGame() (err error) {
+	talentObj := talent.NewTalentObject()
+	err = talentObj.PlayGameOnly(gameID, serverInfo, playerId, roomId)
+	if err != nil {
+		return err
+	} else if debug {
+		fmt.Println("debug - play game success")
+	}
 	return
 }
 

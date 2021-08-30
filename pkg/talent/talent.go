@@ -152,6 +152,19 @@ func (talent *TalentObject) StartGame(gameId string, httpClient *http.Client) er
 	return err
 }
 
+func (talent *TalentObject) PlayGameOnly(gameId string, serverInfo string, playerId string, roomId string) (err error) {
+	gameConfig := new(game.GameConfig)
+	//if choose the playGame only, should set the prameter from cmd
+	gameConfig.Server = serverInfo //startGameData.Data.Server
+	gameConfig.ID = gameId         //startGameData.Data.ID
+	gameConfig.PlayerID, err = strconv.Atoi(playerId)
+	gameConfig.GameURL = "default"
+	gameConfig.RoomID = roomId
+	talent.GameConfig = gameConfig
+	err = game.RunGame(talent.GameConfig)
+	return
+}
+
 func (talent *TalentObject) StopGame(gameId string, httpClient *http.Client) (err error) {
 	relPath := fmt.Sprintf(finishGameUrl, gameId)
 
