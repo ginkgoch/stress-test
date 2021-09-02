@@ -256,6 +256,8 @@ const (
 	PP    GameID = "push_pull"
 	AIR   GameID = "minimum_effort_airport"
 	AIR_T GameID = "minimum_effort_airport_target"
+	BR    GameID = "bomb_risk"
+	BP    GameID = "backpack"
 	//a="minimum_effort_airport"
 	//minimum_effort_airport_target
 	//HF              GameID = "hearts_flowers"
@@ -278,6 +280,10 @@ func RunGame(gameConf *GameConfig) (err error) {
 		player = NewAirport()
 	case AIR_T:
 		player = NewAirport()
+	case BR:
+		player = NewBombRisk()
+	case BP:
+		player = NewBackPack()
 	default:
 		err = fmt.Errorf("player %d, no such game:%s ", gameConf.PlayerID, gameConf.ID)
 		return
