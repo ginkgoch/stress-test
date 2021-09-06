@@ -37,12 +37,15 @@ var toPlayCmd = &cobra.Command{
 	Long:  `talentplayonly optimization test`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+		startTime := time.Now().Unix()
 		err := executeSingleTaskPlayGame()
+		endTime := time.Now().Unix()
 		if err != nil {
 			fmt.Println("play game failed")
 			return
 		} else {
-			fmt.Println("play game success")
+			durTime := endTime - startTime
+			fmt.Printf("play game success, Total Time=%dsec\n", durTime)
 		}
 	},
 }

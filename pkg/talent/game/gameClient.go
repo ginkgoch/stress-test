@@ -183,7 +183,7 @@ func (g *GameClient) handleMessage() error {
 			case GAME_ENDED: // game end
 				g.stopWatch.End(GAME_STARTED, GAME_ENDED)
 				g.stopWatch.Start(GAME_ENDED, "")
-				// return nil
+				return nil
 			default:
 				g.stopWatch.Log("/game unhandled event: ", event.Event)
 			}
