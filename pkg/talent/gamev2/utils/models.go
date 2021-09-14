@@ -23,10 +23,39 @@ type HandshakeMsg struct {
 	Successful               bool                   `json:"successful"`
 }
 
-type Heartbeat struct {
+type HeartbeatMsg struct {
 	ID             string      `json:"id"`
 	Channel        string      `json:"channel"`
 	ClientID       string      `json:"clientId"`
 	ConnectionType string      `json:"connectionType,omitempty"`
 	Ext            interface{} `json:"ext"`
+}
+
+type JoinGameMsg struct {
+	Action string `json:"action"`
+	Room   string `json:"room"`
+	User   int    `json:"user"`
+}
+
+type ActionMsg struct {
+	ID       string      `json:"id"`
+	Channel  string      `json:"channel"`
+	Data     interface{} `json:"data"`
+	ClientID string      `json:"clientId"`
+}
+
+type GameReceiveMsg struct {
+	Channel string
+	Data    []byte
+}
+
+type GameEvent struct {
+	Event string      `json:"event"`
+	Data  interface{} `json:"data"`
+}
+
+type GameJoinedMsg struct {
+	Active bool   `json:"active"`
+	Event  string `json:"event"`
+	Room   string `json:"room"`
 }
