@@ -20,13 +20,23 @@ type GameConfig struct {
 type GameClient struct {
 	WSClient   *WSClient
 	GameConfig *GameConfig
+	ClientId   string
+	Round      int
+	Player     GamePlayer
 }
 
 func NewGameClient(config *GameConfig) *GameClient {
 	wsUrl := fmt.Sprintf("wss://%s/game-server/cometd", config.Server)
+
+	player := NewGamePlayer(config.ID)
+	if player == nil {
+		log.Println("unknown game", config.ID)
+	}
+
 	return &GameClient{
 		WSClient:   NewWebsocketClient(wsUrl),
 		GameConfig: config,
+		Player:     player,
 	}
 }
 
@@ -108,7 +118,7 @@ func (client *GameClient) Handshake() (err error) {
 		return
 	}
 
-	client.WSClient.ClientId = handshakeMsgs[0].ClientID
+	client.ClientId = handshakeMsgs[0].ClientID
 	return
 }
 
@@ -122,8 +132,7 @@ func (client *GameClient) Heartbeat() (err error) {
 
 	client.WSClient.MessageId++
 	connectMsg.ID = strconv.Itoa(client.WSClient.MessageId)
-	connectMsg.ClientID = client.WSClient.ClientId
-
+	connectMsg.ClientID = client.ClientId
 	err = client.WSClient.WriteJSON(connectMsg)
 	if err != nil {
 		log.Println("heartbeat sending failed")
@@ -206,6 +215,7 @@ func (client *GameClient) SendAction(action interface{}, channel string) (err er
 
 	client.WSClient.IncrementMessageId()
 	actionMsg.ID = strconv.Itoa(client.WSClient.MessageId)
+	actionMsg.ClientID = client.ClientId
 	err = client.WSClient.WriteJSON(actionMsg)
 	return
 }
@@ -239,24 +249,30 @@ func (client *GameClient) AutoPlay() error {
 				return err
 			}
 
-			err = client.handleGameEvent(event, &receiveMsg)
+			exit, err := client.handleGameEvent(event, &receiveMsg)
 			if err != nil {
 				return err
+			}
+
+			if exit {
+				return nil
 			}
 		}
 	}
 }
 
-func (client *GameClient) handleGameEvent(event *GameEvent, receivedMsg *GameReceiveMsg) error {
+func (client *GameClient) handleGameEvent(event *GameEvent, receivedMsg *GameReceiveMsg) (exit bool, err error) {
+	exit = false
 	switch event.Event {
 	case "UNAVAILABLE":
-		return errors.New("game UNAVAILABLE")
+		err = errors.New("game UNAVAILABLE")
 	case "USER_JOINED":
-		return client.handleGameJoinedEvent(receivedMsg)
+		err = client.handleGameJoinedEvent(receivedMsg)
 	default:
 		log.Println("unknown game event", event.Event)
-		return nil
 	}
+
+	return
 }
 
 func (client *GameClient) handleGameJoinedEvent(receivedMsg *GameReceiveMsg) error {
@@ -267,9 +283,9 @@ func (client *GameClient) handleGameJoinedEvent(receivedMsg *GameReceiveMsg) err
 		return err
 	}
 	if !joinedMsg.Active {
-		return errors.New("join game ,not active")
+		return errors.New("join game, not active")
 	}
 
-	//TODO: user joined
+	client.Player.UserJoined(client, joinedMsg)
 	return nil
 }

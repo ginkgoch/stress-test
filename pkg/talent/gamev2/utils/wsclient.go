@@ -11,7 +11,6 @@ import (
 type WSClient struct {
 	Conn      *websocket.Conn
 	ServerUrl string
-	ClientId  string
 	MessageId int
 }
 
