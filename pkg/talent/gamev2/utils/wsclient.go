@@ -49,6 +49,7 @@ func (wsc *WSClient) ReadMessage(action string) (originMsg []byte, msg ReceivedM
 		return
 	}
 
+	log.Println("read socket: ", string(originMsg))
 	var receivedMsg []ReceivedMsg
 	err = json.Unmarshal(originMsg, &receivedMsg)
 
@@ -79,6 +80,8 @@ func (wsc *WSClient) WriteTextMessage(text string) error {
 }
 
 func (wsc *WSClient) WriteJSON(content interface{}) error {
+	bytes, _ := json.Marshal([]interface{}{content})
+	log.Println("write socket: ", string(bytes))
 	return wsc.Conn.WriteJSON([]interface{}{content})
 }
 

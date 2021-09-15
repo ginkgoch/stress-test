@@ -9,10 +9,10 @@ import (
 func main() {
 	gameConfig := utils.GameConfig{
 		ID:       "backpack",
-		PlayerID: 14258464,
-		RoomID:   "baap_14258464",
-		Server:   "gameserver.moblab-us.cn/gameserver-0",
-		GameURL:  "https://vgame.moblab-us.cn/backpack/dev/",
+		PlayerID: 789035009,
+		RoomID:   "baap_789035009",
+		Server:   "game-test.moblab-us.cn/gameserver-0/game.com-server",
+		GameURL:  "https://game-dist-test.moblab-us.cn/backpack/dev",
 	}
 	gameClient := utils.NewGameClient(&gameConfig)
 	err := gameClient.PlayGame()

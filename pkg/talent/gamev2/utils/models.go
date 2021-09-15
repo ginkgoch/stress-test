@@ -24,11 +24,11 @@ type HandshakeMsg struct {
 }
 
 type HeartbeatMsg struct {
-	ID             string      `json:"id"`
-	Channel        string      `json:"channel"`
-	ClientID       string      `json:"clientId"`
-	ConnectionType string      `json:"connectionType,omitempty"`
-	Ext            interface{} `json:"ext"`
+	ID             string `json:"id"`
+	Channel        string `json:"channel"`
+	ClientID       string `json:"clientId"`
+	ConnectionType string `json:"connectionType,omitempty"`
+	// Ext            interface{} `json:"ext"`
 }
 
 type JoinGameMsg struct {
@@ -140,7 +140,7 @@ type GamePlayerAction struct {
 type GamePlayer interface {
 	UserJoined(*GameClient, *GameJoinedMsg)
 	SessionEnded(*GameClient, *GameSessionEndedMsg)
-	GameStated(*GameClient, *GameStartedMsg)
+	GameStarted(*GameClient, *GameStartedMsg)
 	PlayerUpdated(*GameClient, *GamePlayerUpdatedMsg)
 	GameRoundStarted(*GameClient, *GameRoundMsg)
 	GameRoundEnded(*GameClient, *GameRoundMsg)

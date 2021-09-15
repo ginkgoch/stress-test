@@ -35,7 +35,7 @@ func (hf *BackPack) SessionEnded(g *GameClient, msg *GameSessionEndedMsg) {
 }
 
 //GameStated ss
-func (hf *BackPack) GameStated(g *GameClient, mgs *GameStartedMsg) {
+func (hf *BackPack) GameStarted(g *GameClient, mgs *GameStartedMsg) {
 
 }
 
@@ -60,8 +60,8 @@ func (hf *BackPack) PlayerUpdated(g *GameClient, msg *GamePlayerUpdatedMsg) {
 				return
 			}
 			action := GamePlayerAction{Action: QUIT, Player: playerUpdated.PlayerNumber}
-			action.Data = []int{g.Round, 0}
-			g.SendAction(action, "/service/gameroom/"+g.GameConfig.RoomID)
+			action.Data = []interface{}{g.Round, 0}
+			g.SendAction(action, "/service/game/"+g.SessionId)
 			return
 		}
 	}
