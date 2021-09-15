@@ -249,25 +249,44 @@ func (client *GameClient) AutoPlay() error {
 				return err
 			}
 
-			exit, err := client.handleGameEvent(event, &receiveMsg)
+			exit, err := client.handleGameRoomEvent(event, &receiveMsg)
 			if err != nil {
+				log.Println(err.Error())
 				return err
 			}
 
 			if exit {
+				log.Print("game room event - session_ended, exit")
+				return nil
+			}
+		case "/game":
+			event := new(GameEvent)
+			if err := json.Unmarshal(receiveMsg.Data, event); err != nil {
+				log.Println("game room json error", err.Error())
+			}
+
+			exit, err := client.handleGameEvent(event, &receiveMsg)
+			if err != nil {
+				log.Println(err.Error())
+				return err
+			}
+
+			if exit {
+				log.Println("game event - game_ended, exit")
 				return nil
 			}
 		}
 	}
 }
 
-func (client *GameClient) handleGameEvent(event *GameEvent, receivedMsg *GameReceiveMsg) (exit bool, err error) {
-	exit = false
+func (client *GameClient) handleGameRoomEvent(event *GameEvent, receivedMsg *GameReceiveMsg) (exit bool, err error) {
 	switch event.Event {
 	case "UNAVAILABLE":
 		err = errors.New("game UNAVAILABLE")
 	case "USER_JOINED":
 		err = client.handleGameJoinedEvent(receivedMsg)
+	case "SESSION_ENDED":
+		exit, err = client.handleSessionEndedEvent(receivedMsg)
 	default:
 		log.Println("unknown game event", event.Event)
 	}
@@ -288,4 +307,92 @@ func (client *GameClient) handleGameJoinedEvent(receivedMsg *GameReceiveMsg) err
 
 	client.Player.UserJoined(client, joinedMsg)
 	return nil
+}
+
+func (client *GameClient) handleSessionEndedEvent(receivedMsg *GameReceiveMsg) (exit bool, err error) {
+	joinedMsg := &GameSessionEndedMsg{}
+	err = json.Unmarshal(receivedMsg.Data, joinedMsg)
+	if err != nil {
+		return
+	}
+
+	client.Player.SessionEnded(client, joinedMsg)
+	exit = true
+	return
+}
+
+func (client *GameClient) handleGameEvent(event *GameEvent, receivedMsg *GameReceiveMsg) (exit bool, err error) {
+	eventData, err := json.Marshal(event.Data)
+	if err != nil {
+		log.Println("game event marshal error")
+		return
+	}
+
+	switch event.Event {
+	case "GAME_STARTED":
+		if err = client.handleGameStartedEvent(eventData); err != nil {
+			return
+		}
+	case "PLAYER_UPDATED":
+		if err = client.handleGamePlayerUpdated(eventData); err != nil {
+			return
+		}
+	case "GAME_ROUND_STARTED":
+		if err = client.handleGameRoundEvent(eventData, event.Event, client.Player.GameRoundStarted); err != nil {
+			return
+		}
+	case "GAME_ROUND_ENDED":
+		if err = client.handleGameRoundEvent(eventData, event.Event, client.Player.GameRoundEnded); err != nil {
+			return
+		}
+	case "GAME_ENDED":
+		log.Println("game event - game_ended, exit")
+		exit = true
+	default:
+		log.Println("unknown game event", event.Event)
+	}
+
+	return
+}
+
+func (client *GameClient) handleGameStartedEvent(eventData []byte) (err error) {
+	msg := new(GameStartedMsg)
+	if err = json.Unmarshal(eventData, msg); err != nil {
+		log.Println("game started event json error", err.Error())
+		return
+	}
+
+	if msg.Status != "RUNNING" {
+		err = fmt.Errorf("game status error, expected RUNNING but got <%s>", msg.Status)
+		log.Println(err.Error())
+		return
+	}
+
+	client.Round = msg.Round
+	client.Player.GameStated(client, msg)
+	return
+}
+
+func (client *GameClient) handleGamePlayerUpdated(eventData []byte) (err error) {
+	msg := new(GamePlayerUpdatedMsg)
+	err = json.Unmarshal(eventData, msg)
+	if err != nil {
+		err = fmt.Errorf("game event - player_updated json unmarshal error <%v>", err.Error())
+		return
+	}
+
+	client.Player.PlayerUpdated(client, msg)
+	return
+}
+
+func (client *GameClient) handleGameRoundEvent(eventData []byte, eventName string, playerCallback func(*GameClient, *GameRoundMsg)) (err error) {
+	msg := new(GameRoundMsg)
+	if err = json.Unmarshal(eventData, msg); err != nil {
+		err = fmt.Errorf("game event - %s json unmarshal failed %v", eventName, err.Error())
+		return
+	}
+
+	client.Round = msg.Round
+	playerCallback(client, msg)
+	return
 }
