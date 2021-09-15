@@ -19,12 +19,14 @@ type GameConfig struct {
 }
 
 type GameClient struct {
-	WSClient   *WSClient
-	GameConfig *GameConfig
-	ClientId   string
-	Round      int
-	Player     GamePlayer
-	SessionId  string
+	WSClient           *WSClient
+	GameConfig         *GameConfig
+	ClientId           string
+	Round              int
+	Player             GamePlayer
+	SessionId          string
+	HeartbeatChan      chan *ReceivedMsg
+	HeartbeatLeaveChan chan bool
 }
 
 func NewGameClient(config *GameConfig) *GameClient {
@@ -36,13 +38,17 @@ func NewGameClient(config *GameConfig) *GameClient {
 	}
 
 	return &GameClient{
-		WSClient:   NewWebsocketClient(wsUrl),
-		GameConfig: config,
-		Player:     player,
+		WSClient:           NewWebsocketClient(wsUrl),
+		GameConfig:         config,
+		Player:             player,
+		HeartbeatChan:      make(chan *ReceivedMsg),
+		HeartbeatLeaveChan: make(chan bool),
 	}
 }
 
 func (g *GameClient) Close() error {
+	g.HeartbeatLeaveChan <- true
+	time.Sleep(2 * time.Second)
 	return g.WSClient.Close()
 }
 
@@ -61,7 +67,7 @@ func (client *GameClient) PlayGame() (err error) {
 	client.WSClient.MessageId++
 
 	log.Println("heatbeat")
-	if err = client.HeartbeatOnce(false); err != nil {
+	if err = client.Heartbeat(false); err != nil {
 		return
 	}
 
@@ -71,9 +77,11 @@ func (client *GameClient) PlayGame() (err error) {
 	}
 
 	log.Println("heatbeat")
-	if err = client.HeartbeatOnce(true); err != nil {
+	if err = client.Heartbeat(true); err != nil {
 		return
 	}
+
+	go client.KeepAlive()
 
 	log.Println("playgame")
 	if err = client.AutoPlay(); err != nil {
@@ -145,7 +153,8 @@ func (client *GameClient) Handshake() (err error) {
 	return
 }
 
-func (client *GameClient) HeartbeatOnce(ignoreAck bool) (err error) {
+// step 3, heartbeat
+func (client *GameClient) Heartbeat(ignoreAck bool) (err error) {
 	connectMsg := &HeartbeatMsg{
 		ConnectionType: "websocket",
 		// Ext:            map[string]interface{}{"ack": 0},
@@ -178,55 +187,8 @@ func (client *GameClient) HeartbeatOnce(ignoreAck bool) (err error) {
 	return
 }
 
-// step 3, heartbeat
-func (client *GameClient) Heartbeat() (err error) {
-	connectMsg := &HeartbeatMsg{
-		ConnectionType: "websocket",
-		// Ext:            map[string]interface{}{"ack": 0},
-		Channel: "/meta/connect",
-	}
-
-	client.WSClient.MessageId++
-	connectMsg.ID = strconv.Itoa(client.WSClient.MessageId)
-	connectMsg.ClientID = client.ClientId
-	err = client.WSClient.WriteJSON(connectMsg)
-	if err != nil {
-		log.Println("heartbeat sending failed")
-		return
-	}
-
-	originMsg, msg, err := client.WSClient.ReadMessage("connect")
-	if err != nil {
-		return
-	}
-
-	err = ValidateChannel(msg, "connect", "/meta/connect")
-	if err != nil {
-		return
-	}
-
-	var heartbeats []HeartbeatMsg
-	err = json.Unmarshal(originMsg, &heartbeats)
-	if err != nil {
-		log.Println("connect json err:", err, heartbeats)
-		return
-	}
-
-	client.WSClient.IncrementMessageId()
-	heartbeatMsg := heartbeats[0]
-	heartbeatMsg.ConnectionType = "websocket" //connectionType: 'websocket'
-	heartbeatMsg.ID = strconv.Itoa(client.WSClient.MessageId)
-	err = client.WSClient.WriteJSON(heartbeatMsg)
-	if err != nil {
-		log.Println("send heartbeat failed", err)
-		return
-	}
-
-	return
-}
-
 // joinOrLeave: join|leave
-func (client *GameClient) processGameJoinOrLeave(config *GameConfig, joinOrLeave string) (err error) {
+func (client *GameClient) processGameJoinOrLeave(config *GameConfig, joinOrLeave string, requireAck bool) (err error) {
 	joinGame := JoinGameMsg{
 		Action: joinOrLeave,
 		Room:   config.RoomID,
@@ -235,6 +197,10 @@ func (client *GameClient) processGameJoinOrLeave(config *GameConfig, joinOrLeave
 
 	err = client.SendAction(joinGame, "/service/gameroom/"+config.RoomID)
 	if err != nil {
+		return
+	}
+
+	if !requireAck {
 		return
 	}
 
@@ -253,13 +219,13 @@ func (client *GameClient) processGameJoinOrLeave(config *GameConfig, joinOrLeave
 
 // step 4, join game
 func (client *GameClient) JoinGame() (err error) {
-	err = client.processGameJoinOrLeave(client.GameConfig, "join")
+	err = client.processGameJoinOrLeave(client.GameConfig, "join", true)
 	return
 }
 
 // step 5, leave game
 func (client *GameClient) LeaveGame() (err error) {
-	err = client.processGameJoinOrLeave(client.GameConfig, "leave")
+	err = client.processGameJoinOrLeave(client.GameConfig, "leave", false)
 	return
 }
 
@@ -276,13 +242,45 @@ func (client *GameClient) SendAction(action interface{}, channel string) (err er
 	return
 }
 
+func isHeartbeatMsg(msg *ReceivedMsg) bool {
+	return msg.Channel == "/meta/connect"
+}
+
+func (client *GameClient) KeepAlive() {
+	for {
+		log.Println("keepalive ack waiting")
+		select {
+		case msg := <-client.HeartbeatChan:
+			log.Println("heartbeat triggered - dequeued")
+
+			err := ValidateChannel(msg, "connect", "/meta/connect")
+			if err != nil {
+				log.Fatalln("heartbeat failed", err)
+				return
+			}
+
+			client.Heartbeat(true)
+		case exit := <-client.HeartbeatLeaveChan:
+			if exit {
+				log.Println("exit ensuring keep alive")
+				return
+			}
+		}
+	}
+}
+
 func (client *GameClient) AutoPlay() error {
 	for {
-		time.Sleep(1 * time.Second)
-
-		_, msg, err := client.WSClient.ReadMessage("game move")
+		_, msg, err := client.WSClient.ReadMessage("read game msg")
 		if err != nil {
 			return err
+		}
+
+		if isHeartbeatMsg(msg) {
+			go func() {
+				log.Println("heartbeat triggered - enqueue")
+				client.HeartbeatChan <- msg
+			}()
 		}
 
 		data, err := json.Marshal(msg.Data)
@@ -443,8 +441,6 @@ func (client *GameClient) handleGamePlayerUpdated(eventData []byte) (err error) 
 		return
 	}
 
-	client.HeartbeatOnce(true)
-	time.Sleep(1 * time.Second)
 	client.Player.PlayerUpdated(client, msg)
 	return
 }

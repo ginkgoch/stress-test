@@ -41,7 +41,7 @@ func (wsc *WSClient) Connect() (err error) {
 	return
 }
 
-func (wsc *WSClient) ReadMessage(action string) (originMsg []byte, msg ReceivedMsg, err error) {
+func (wsc *WSClient) ReadMessage(action string) (originMsg []byte, msg *ReceivedMsg, err error) {
 	_, originMsg, err = wsc.Conn.ReadMessage()
 
 	if err != nil {
@@ -65,7 +65,7 @@ func (wsc *WSClient) ReadMessage(action string) (originMsg []byte, msg ReceivedM
 		return
 	}
 
-	msg = receivedMsg[0]
+	msg = &receivedMsg[0]
 	if msg.Error != "" {
 		log.Println(action+" failed", msg.Error)
 		err = errors.New(msg.Error)
@@ -89,7 +89,7 @@ func (wsc *WSClient) IncrementMessageId() {
 	wsc.MessageId++
 }
 
-func ValidateChannel(msg ReceivedMsg, action string, channel string) (err error) {
+func ValidateChannel(msg *ReceivedMsg, action string, channel string) (err error) {
 	if msg.Channel != channel {
 		errMsg := action + " receive channel incorrect: " + msg.Channel
 		log.Println(errMsg)
