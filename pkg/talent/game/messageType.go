@@ -88,9 +88,11 @@ type Player struct {
 // 	} `json:"data,omitempty"`
 // }
 type ReceivedMsg struct {
-	Channel string      `json:"channel"`
-	Error   string      `json:"error,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
+	Channel    string      `json:"channel"`
+	Error      string      `json:"error,omitempty"`
+	Data       interface{} `json:"data,omitempty"`
+	Id         *string     `json:"id"`
+	Successful *bool       `json:"successful"`
 }
 
 //Event event type
@@ -112,6 +114,19 @@ type JoinedMsg struct {
 	Active bool   `json:"active"`
 	Event  string `json:"event"`
 	Room   string `json:"room"`
+}
+
+type LeaveMsg struct {
+	Channel    string `json:"channel"`
+	Id         string `json:"id"`
+	Successful bool   `json:"successful"`
+}
+
+type UnsubscribeSend struct {
+	Channel      string `json:"channel"`
+	Id           string `json:"id"`
+	ClientId     string `json:"clientId"`
+	Subscription string `json:"subscription"`
 }
 
 //SessionEndedMsg   event SESSION_ENDED

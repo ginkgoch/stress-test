@@ -80,8 +80,6 @@ func (gameClient *GameClient) Run() (err error) {
 	gameClient.stopWatch.Log("DelayTime:", strconv.Itoa(gameClient.Delay))
 	if err != nil {
 		return err
-	} else {
-		gameClient.leaveGame()
 	}
 	return nil
 
@@ -89,7 +87,17 @@ func (gameClient *GameClient) Run() (err error) {
 
 func (g *GameClient) handleMessage() error {
 	for receiveMsg := range g.wsClient.ReceivedMsgChan {
-		log.Println("channel received:", receiveMsg.Channel)
+		log.Println("channel received:", receiveMsg.Channel, receiveMsg)
+		if strings.Contains(receiveMsg.Channel, "/service/gameroom/baap") && receiveMsg.Id != nil {
+			var id = receiveMsg.Id
+			intId, err := strconv.Atoi(*id)
+			if err == nil && intId > 10 && receiveMsg.Successful != nil && *receiveMsg.Successful {
+				fmt.Println("leaveGame Success, Close Websocket")
+				g.close()
+			} else {
+				log.Println("========leave Game Failed====")
+			}
+		}
 		switch receiveMsg.Channel {
 		case "error":
 			return errors.New(string(receiveMsg.Data))
@@ -122,8 +130,12 @@ func (g *GameClient) handleMessage() error {
 				if err != nil {
 					return err
 				}
-				g.gamePlayer.SessionEnded(g, joinedMsg)
-				return nil
+				//g.gamePlayer.SessionEnded(g, joinedMsg)
+				//fmt.Println("GameEnd leave game start===========")
+				g.unsubscribeGame()
+				g.leaveGame()
+				//fmt.Println("GameEnd leave game end===========")
+				//return nil
 			default:
 				g.stopWatch.Start("/gameroom unhandled event: ", event.Event)
 			}
@@ -183,11 +195,14 @@ func (g *GameClient) handleMessage() error {
 			case GAME_ENDED: // game end
 				g.stopWatch.End(GAME_STARTED, GAME_ENDED)
 				g.stopWatch.Start(GAME_ENDED, "")
-				return nil
+				fmt.Println("gameEnd===============")
+				//return nil
 			default:
+				//fmt.Println("UNhandled EVENT==============", event.Event)
 				g.stopWatch.Log("/game unhandled event: ", event.Event)
 			}
 		default:
+			//fmt.Println("UNhandled CHANNEL==============", receiveMsg.Channel)
 			g.stopWatch.Log("unhandled_channel", receiveMsg.Channel)
 		}
 	}
@@ -245,7 +260,17 @@ func (g *GameClient) leaveGame() {
 		Room:   g.roomID,
 		User:   g.userID,
 	}
+	//fmt.Println("leaving game action start===")
 	g.wsClient.SendAction(joinGame, "/service/gameroom/"+g.roomID)
+	//fmt.Println("leaving game action end===")
+}
+
+func (g *GameClient) unsubscribeGame() {
+	log.Println("unsubscribeGame game room")
+	//fmt.Println("unsubscribeGame action start===")
+	g.wsClient.UnSubAction("/gameroom", "/meta/unsubscribe")
+	//fmt.Println("unsubscribeGame action End===")
+
 }
 
 type GameID string

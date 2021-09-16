@@ -41,11 +41,12 @@ var toPlayCmd = &cobra.Command{
 		err := executeSingleTaskPlayGame()
 		endTime := time.Now().Unix()
 		if err != nil {
-			fmt.Println("play game failed")
+			fmt.Println("play game failed, Newchange")
+			fmt.Println(err)
 			return
 		} else {
 			durTime := endTime - startTime
-			fmt.Printf("play game success, Total Time=%dsec\n", durTime)
+			fmt.Printf("play game success, Newchange Total Time=%dsec\n", durTime)
 		}
 	},
 }

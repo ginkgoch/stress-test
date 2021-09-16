@@ -3,11 +3,10 @@ package game
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"sync"
-
 	"github.com/ginkgoch/stress-test/pkg/log"
 	"github.com/ginkgoch/stress-test/pkg/talent/lib"
+	"strconv"
+	"sync"
 
 	//"test/websocket"
 	"github.com/gorilla/websocket"
@@ -18,9 +17,10 @@ type WebsocketClient struct {
 	websocket *websocket.Conn
 	messageID int
 
-	serverURL       string
-	clientID        string
-	sendMsgChan     chan setMessage
+	serverURL   string
+	clientID    string
+	sendMsgChan chan setMessage
+	//ReceivedMsgChan chan *DataRecv
 	ReceivedMsgChan chan *DataRecv
 	handshakeChan   chan error
 	closed          bool
@@ -41,14 +41,28 @@ type DataSend struct {
 	ClientID string      `json:"clientId"`
 }
 
+type UnSubDataSend struct {
+	ID           string `json:"id"`
+	Channel      string `json:"channel"`
+	Subscription string `json:"subscription"`
+	ClientID     string `json:"clientId"`
+}
+
 func (ds *DataSend) setMessage(id string, clientID string) {
 	ds.ID = id
 	ds.ClientID = clientID
 }
 
+func (ds *UnSubDataSend) setMessage(id string, clientID string) {
+	ds.ID = id
+	ds.ClientID = clientID
+}
+
 type DataRecv struct {
-	Channel string
-	Data    []byte
+	Channel    string  `json:"channel"`
+	Data       []byte  `json:"data"`
+	Id         *string `json:"id"`
+	Successful *bool   `json:"successful"`
 }
 
 // Heartbeat represents Heartbeat message
@@ -178,6 +192,10 @@ func (ws *WebsocketClient) handshake() error {
 
 func (ws *WebsocketClient) handleMessage() {
 	for {
+		//err := ws.websocket.SetReadDeadline(time.Now().Add(30 * time.Second))
+		//if err != nil {
+		//	return
+		//}
 		_, message, err := ws.websocket.ReadMessage()
 		if err != nil {
 			if !ws.closed {
@@ -199,6 +217,7 @@ func (ws *WebsocketClient) handleMessage() {
 			ws.stopWatch.Log("rsMsg error", rsMsgs[0].Error)
 			ws.close()
 		}
+		log.Println("Channel Received: ", rsMsgs[0].Channel)
 		switch rsMsg := rsMsgs[0]; rsMsg.Channel {
 		case "/meta/handshake":
 			ws.stopWatch.End("handshake", "")
@@ -212,6 +231,9 @@ func (ws *WebsocketClient) handleMessage() {
 			if err != nil {
 				ws.stopWatch.Log("json error", err.Error())
 			} else {
+				if rsMsg.Id != nil {
+					ws.ReceivedMsgChan <- &DataRecv{Channel: rsMsg.Channel, Id: rsMsg.Id, Successful: rsMsg.Successful}
+				}
 				ws.ReceivedMsgChan <- &DataRecv{Channel: rsMsg.Channel, Data: data}
 			}
 		}
@@ -238,6 +260,14 @@ func (ws *WebsocketClient) SendAction(action interface{}, channel string) {
 
 }
 
+func (ws *WebsocketClient) UnSubAction(subscription string, channel string) {
+	msgNeedSend := UnSubDataSend{
+		Subscription: subscription,
+		Channel:      channel,
+	}
+	ws.sendData(&msgNeedSend)
+}
+
 func (ws *WebsocketClient) handleHeartbeat(message []byte) {
 	var heartbeats []Heartbeat
 	err := json.Unmarshal(message, &heartbeats)
@@ -247,6 +277,7 @@ func (ws *WebsocketClient) handleHeartbeat(message []byte) {
 	}
 	heartbeatMsg := heartbeats[0]
 	heartbeatMsg.ConnectionType = "websocket" //connectionType: 'websocket'
+	log.Println("=========heartbeat=======")
 	ws.sendData(&heartbeatMsg)
 }
 

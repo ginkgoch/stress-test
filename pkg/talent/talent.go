@@ -18,6 +18,7 @@ const (
 	statusUrl      = "/status"
 	startGameUrl   = "/startGame/%s/%s"
 	finishGameUrl  = "/game/finish/%s"
+	summaryUrl     = "/summary?ignoreTrait=true"
 )
 
 var (
@@ -30,6 +31,16 @@ func NewTalentObject() *TalentObject {
 
 func (talent *TalentObject) Status(httpClient *http.Client) error {
 	request, err := http.NewRequest("GET", talent.formalizeUrl(statusUrl), nil)
+	if err != nil {
+		return err
+	}
+
+	err = templates.HttpGet(request, httpClient)
+	return err
+}
+
+func (talent *TalentObject) Summary(httpClient *http.Client) error {
+	request, err := http.NewRequest("GET", talent.formalizeUrl(summaryUrl), nil)
 	if err != nil {
 		return err
 	}
