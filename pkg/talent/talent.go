@@ -18,6 +18,7 @@ const (
 	statusUrl      = "/status"
 	startGameUrl   = "/startGame/%s/%s"
 	finishGameUrl  = "/game/finish/%s"
+	statusGameUrl  = "/game/status/%s"
 	summaryUrl     = "/summary?ignoreTrait=true"
 )
 
@@ -41,12 +42,30 @@ func (talent *TalentObject) Status(httpClient *http.Client) error {
 
 func (talent *TalentObject) Summary(httpClient *http.Client) error {
 	request, err := http.NewRequest("GET", talent.formalizeUrl(summaryUrl), nil)
+	request.AddCookie(talent.Cookie)
 	if err != nil {
 		return err
 	}
 
-	err = templates.HttpGet(request, httpClient)
-	return err
+	res, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	infoData, err := templates.ConsumeResponse(res)
+	if err != nil {
+		return err
+	}
+
+	info := new(Summary)
+	if err = json.Unmarshal(infoData, &info); err != nil {
+		return err
+	}
+	if info.Success {
+		return nil
+	} else {
+		return fmt.Errorf("Get Summary failed, Info.Success=%v", info.Success)
+	}
 }
 
 func (talent *TalentObject) SignIn(httpClient *http.Client) error {
@@ -178,6 +197,23 @@ func (talent *TalentObject) PlayGameOnly(gameId string, serverInfo string, playe
 
 func (talent *TalentObject) StopGame(gameId string, httpClient *http.Client) (err error) {
 	relPath := fmt.Sprintf(finishGameUrl, gameId)
+
+	request, err := http.NewRequest("GET", talent.formalizeUrl(relPath), nil)
+	request.Header.Set("Content-Type", "application/json")
+
+	if talent.Cookie != nil {
+		request.AddCookie(talent.Cookie)
+	}
+	if err != nil {
+		return err
+	}
+
+	err = templates.HttpGet(request, httpClient)
+	return
+}
+
+func (talent *TalentObject) GameStatus(gameId string, httpClient *http.Client) (err error) {
+	relPath := fmt.Sprintf(statusGameUrl, gameId)
 
 	request, err := http.NewRequest("GET", talent.formalizeUrl(relPath), nil)
 	request.Header.Set("Content-Type", "application/json")

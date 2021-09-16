@@ -247,6 +247,13 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 			return
 		}
 
+		if _, err = executeSingleStep(i, "get-game-status", talentObj, ch, func() error {
+			processDelay()
+			return talentObj.GameStatus(game, httpClient)
+		}); err != nil {
+			return
+		}
+
 		if _, err = executeSingleStep(i, "summary", talentObj, ch, func() error {
 			return talentObj.Summary(httpClient)
 		}); err != nil {

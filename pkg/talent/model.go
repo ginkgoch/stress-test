@@ -58,6 +58,21 @@ type Information struct {
 	} `json:"user"`
 }
 
+type Summary struct {
+	Data struct {
+		Progress struct {
+			Activities map[string]interface{} `json:"activities"`
+			Profiles   map[string]interface{} `json:"profiles"`
+			World      interface{}            `json:"world"`
+		} `json:"progress"`
+		Report struct {
+			Category  map[string]interface{} `json:"category"`
+			Report_Id string                 `json:"report_id"`
+		} `json:"report"`
+	} `json:"data"`
+	Success bool `json:"success"`
+}
+
 // type GameConfig struct {
 // 	ID       string `json:"id"`
 // 	PlayerID int    `json:"playerId"`
