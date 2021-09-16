@@ -15,7 +15,7 @@ func main() {
 		GameURL:  "https://game-dist-test.moblab-us.cn/backpack/dev",
 	}
 	gameClient := utils.NewGameClient(&gameConfig)
-	err := gameClient.PlayGame()
+	err := gameClient.Run()
 	if err != nil {
 		log.Println(err)
 	} else {
