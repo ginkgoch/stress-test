@@ -89,18 +89,28 @@ func (g *GameClient) handleMessage() error {
 	leaveId := -1
 	for receiveMsg := range g.wsClient.ReceivedMsgChan {
 		log.Println("channel received:", receiveMsg.Channel, receiveMsg)
-		if strings.Contains(receiveMsg.Channel, "/service/gameroom/baap") && receiveMsg.Id != nil {
-			var id = receiveMsg.Id
+		var id = receiveMsg.Id
+		if id != nil {
 			intId, err := strconv.Atoi(*id)
-			fmt.Println("fang===leavingGame channel:", receiveMsg.Channel, g.wsClient.clientID, receiveMsg.Successful, intId)
-			if err == nil && intId > 5 && receiveMsg.Successful != nil && *receiveMsg.Successful {
-				fmt.Println("fang===leavGame clientId", g.wsClient.clientID)
-				fmt.Println("leaveGame Success, Close Websocket")
+			if err == nil && leaveId != -1 && leaveId == intId {
+				fmt.Println("fang====leave game success,close websocket")
 				g.close()
-			} else {
-				log.Println("========leave Game Failed====")
+				return nil
 			}
 		}
+
+		//if strings.Contains(receiveMsg.Channel, "/service/gameroom/baap") && receiveMsg.Id != nil {
+		//	var id = receiveMsg.Id
+		//	intId, err := strconv.Atoi(*id)
+		//	fmt.Println("fang===leavingGame channel:", receiveMsg.Channel, g.wsClient.clientID, receiveMsg.Successful, intId)
+		//	if err == nil && intId > 5 && receiveMsg.Successful != nil && *receiveMsg.Successful {
+		//		fmt.Println("fang===leavGame clientId", g.wsClient.clientID)
+		//		fmt.Println("leaveGame Success, Close Websocket")
+		//		g.close()
+		//	} else {
+		//		log.Println("========leave Game Failed====")
+		//	}
+		//}
 		switch receiveMsg.Channel {
 		case "error":
 			return errors.New(string(receiveMsg.Data))
@@ -137,12 +147,12 @@ func (g *GameClient) handleMessage() error {
 				//g.gamePlayer.SessionEnded(g, joinedMsg)
 				//fmt.Println("GameEnd leave game start===========")
 				g.unsubscribeGame()
-
 				g.leaveGame()
 
 				for leaveId = range g.wsClient.LeaveIdChan {
 					if leaveId >= 0 {
 						close(g.wsClient.LeaveIdChan)
+						fmt.Println("leave messageID:", leaveId)
 					}
 				}
 				//fmt.Println("GameEnd leave game end===========")

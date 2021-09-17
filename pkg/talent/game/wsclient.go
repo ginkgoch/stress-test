@@ -123,10 +123,10 @@ func (ws *WebsocketClient) sendToWebsocket(sendData setMessage) error {
 	}
 	ws.messageID++
 
-	dataSend, err1 := sendData.(*DataSend)
-	if !err1 {
-		_, err1 := dataSend.Data.(JoinGameSend)
-		if !err1 {
+	dataSend, ok := sendData.(*DataSend)
+	if ok {
+		jgs, ok := dataSend.Data.(JoinGameSend)
+		if ok && jgs.Action == "leave" {
 			ws.LeaveIdChan <- ws.messageID
 		}
 	}
@@ -243,8 +243,9 @@ func (ws *WebsocketClient) handleMessage() {
 			if err != nil {
 				ws.stopWatch.Log("json error", err.Error())
 			} else {
+				//ws.ReceivedMsgChan <- &DataRecv{Channel: rsMsg.Channel, Data: data, Id: rsMsg.Id, Successful: rsMsg.Successful}
 				if rsMsg.Id != nil {
-					ws.ReceivedMsgChan <- &DataRecv{Channel: rsMsg.Channel, Id: rsMsg.Id, Successful: rsMsg.Successful}
+					ws.ReceivedMsgChan <- &DataRecv{Channel: rsMsg.Channel, Data: data, Id: rsMsg.Id, Successful: rsMsg.Successful}
 				}
 				ws.ReceivedMsgChan <- &DataRecv{Channel: rsMsg.Channel, Data: data}
 			}
