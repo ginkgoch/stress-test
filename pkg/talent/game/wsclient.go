@@ -27,6 +27,7 @@ type WebsocketClient struct {
 	stopWatch       *lib.StopWatch
 	userID          int
 	mutex           sync.Mutex
+	LeaveIdChan     chan int
 }
 
 type setMessage interface {
@@ -90,6 +91,7 @@ func NewWebsocketClient(serverURL string, userid int) *WebsocketClient {
 		stopWatch:       &stopwatch,
 		userID:          userid,
 		closed:          true,
+		LeaveIdChan:     make(chan int),
 	}
 	return &gc
 }
@@ -119,6 +121,9 @@ func (ws *WebsocketClient) sendToWebsocket(sendData setMessage) error {
 		return nil
 	}
 	ws.messageID++
+
+	joinGameMsg, err := sendData.(DataSend)
+	ws.LeaveIdChan <- ws.messageID
 	sendData.setMessage(strconv.Itoa(ws.messageID), ws.clientID)
 	err := ws.websocket.WriteJSON([]setMessage{sendData})
 	if err != nil {

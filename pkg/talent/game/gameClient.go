@@ -86,12 +86,15 @@ func (gameClient *GameClient) Run() (err error) {
 }
 
 func (g *GameClient) handleMessage() error {
+	leaveId := -1
 	for receiveMsg := range g.wsClient.ReceivedMsgChan {
 		log.Println("channel received:", receiveMsg.Channel, receiveMsg)
 		if strings.Contains(receiveMsg.Channel, "/service/gameroom/baap") && receiveMsg.Id != nil {
 			var id = receiveMsg.Id
 			intId, err := strconv.Atoi(*id)
-			if err == nil && intId > 10 && receiveMsg.Successful != nil && *receiveMsg.Successful {
+			fmt.Println("fang===leavingGame channel:", receiveMsg.Channel, g.wsClient.clientID, receiveMsg.Successful, intId)
+			if err == nil && intId > 5 && receiveMsg.Successful != nil && *receiveMsg.Successful {
+				fmt.Println("fang===leavGame clientId", g.wsClient.clientID)
 				fmt.Println("leaveGame Success, Close Websocket")
 				g.close()
 			} else {
@@ -120,6 +123,7 @@ func (g *GameClient) handleMessage() error {
 				if !joinedMsg.Active {
 					return errors.New("join game ,not active")
 				}
+				fmt.Println("fang===joinGame clientID:", g.wsClient.clientID)
 				g.stopWatch.Start(USER_JOINED, "")
 				g.gamePlayer.UserJoined(g, joinedMsg)
 			case SESSION_ENDED:
@@ -133,7 +137,14 @@ func (g *GameClient) handleMessage() error {
 				//g.gamePlayer.SessionEnded(g, joinedMsg)
 				//fmt.Println("GameEnd leave game start===========")
 				g.unsubscribeGame()
+
 				g.leaveGame()
+
+				for leaveId = range g.wsClient.LeaveIdChan {
+					if leaveId >= 0 {
+						close(g.wsClient.LeaveIdChan)
+					}
+				}
 				//fmt.Println("GameEnd leave game end===========")
 				//return nil
 			default:
@@ -195,7 +206,7 @@ func (g *GameClient) handleMessage() error {
 			case GAME_ENDED: // game end
 				g.stopWatch.End(GAME_STARTED, GAME_ENDED)
 				g.stopWatch.Start(GAME_ENDED, "")
-				fmt.Println("gameEnd===============")
+				//fmt.Println("gameEnd===============")
 				//return nil
 			default:
 				//fmt.Println("UNhandled EVENT==============", event.Event)
@@ -261,6 +272,7 @@ func (g *GameClient) leaveGame() {
 		User:   g.userID,
 	}
 	//fmt.Println("leaving game action start===")
+	fmt.Println("fang===leaveGame start, clientID: ", g.wsClient.clientID)
 	g.wsClient.SendAction(joinGame, "/service/gameroom/"+g.roomID)
 	//fmt.Println("leaving game action end===")
 }
