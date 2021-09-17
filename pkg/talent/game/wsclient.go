@@ -3,10 +3,11 @@ package game
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ginkgoch/stress-test/pkg/log"
-	"github.com/ginkgoch/stress-test/pkg/talent/lib"
 	"strconv"
 	"sync"
+
+	"github.com/ginkgoch/stress-test/pkg/log"
+	"github.com/ginkgoch/stress-test/pkg/talent/lib"
 
 	//"test/websocket"
 	"github.com/gorilla/websocket"
@@ -122,8 +123,14 @@ func (ws *WebsocketClient) sendToWebsocket(sendData setMessage) error {
 	}
 	ws.messageID++
 
-	joinGameMsg, err := sendData.(DataSend)
-	ws.LeaveIdChan <- ws.messageID
+	dataSend, err1 := sendData.(*DataSend)
+	if !err1 {
+		_, err1 := dataSend.Data.(JoinGameSend)
+		if !err1 {
+			ws.LeaveIdChan <- ws.messageID
+		}
+	}
+
 	sendData.setMessage(strconv.Itoa(ws.messageID), ws.clientID)
 	err := ws.websocket.WriteJSON([]setMessage{sendData})
 	if err != nil {
