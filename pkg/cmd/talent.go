@@ -226,12 +226,14 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 			processDelay()
 			return talentObj.StartGame(game, httpClient)
 		}); err != nil {
-			return
+			fmt.Println("start-game failed error:", err)
+			//return
 		}
 
 		if playGame && (stage == 0 || stage > i) {
 			err = talentObj.PlayGame(game)
 			if err != nil {
+				fmt.Println("play game failed, error:", err)
 				return err
 			} else if debug {
 				fmt.Println("debug - play game success")
@@ -244,19 +246,22 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 			processDelay()
 			return talentObj.StopGame(game, httpClient)
 		}); err != nil {
-			return
+			fmt.Println("stop-game failed error:", err)
+			//return
 		}
 
 		if _, err = executeSingleStep(i, "get-game-status", talentObj, ch, func() error {
 			return talentObj.GameStatus(game, httpClient)
 		}); err != nil {
-			return
+			fmt.Println("get-game-status error:", err)
+			//return
 		}
 
 		if _, err = executeSingleStep(i, "summary", talentObj, ch, func() error {
 			return talentObj.Summary(httpClient)
 		}); err != nil {
-			return
+			fmt.Println("summary error:", err)
+			//return
 		}
 
 		i = currentIndex

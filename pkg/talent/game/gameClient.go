@@ -93,7 +93,7 @@ func (g *GameClient) handleMessage() error {
 		if id != nil {
 			intId, err := strconv.Atoi(*id)
 			if err == nil && leaveId != -1 && leaveId == intId {
-				fmt.Println("fang====leave game success,close websocket")
+				fmt.Println("leave game success,close websocket")
 				g.close()
 				return nil
 			}
@@ -133,7 +133,7 @@ func (g *GameClient) handleMessage() error {
 				if !joinedMsg.Active {
 					return errors.New("join game ,not active")
 				}
-				fmt.Println("fang===joinGame clientID:", g.wsClient.clientID)
+				//fmt.Println("fang===joinGame clientID:", g.wsClient.clientID)
 				g.stopWatch.Start(USER_JOINED, "")
 				g.gamePlayer.UserJoined(g, joinedMsg)
 			case SESSION_ENDED:
@@ -152,7 +152,7 @@ func (g *GameClient) handleMessage() error {
 				for leaveId = range g.wsClient.LeaveIdChan {
 					if leaveId >= 0 {
 						close(g.wsClient.LeaveIdChan)
-						fmt.Println("leave messageID:", leaveId)
+						//fmt.Println("leave messageID:", leaveId)
 					}
 				}
 				//fmt.Println("GameEnd leave game end===========")
@@ -282,7 +282,7 @@ func (g *GameClient) leaveGame() {
 		User:   g.userID,
 	}
 	//fmt.Println("leaving game action start===")
-	fmt.Println("fang===leaveGame start, clientID: ", g.wsClient.clientID)
+	//fmt.Println("fang===leaveGame start, clientID: ", g.wsClient.clientID)
 	g.wsClient.SendAction(joinGame, "/service/gameroom/"+g.roomID)
 	//fmt.Println("leaving game action end===")
 }
@@ -335,6 +335,7 @@ func RunGame(gameConf *GameConfig) (err error) {
 		err = fmt.Errorf("player %d, no such game:%s ", gameConf.PlayerID, gameConf.ID)
 		return
 	}
+	//fmt.Println("gameID:",gameConf.ID)
 	gameClient := *NewGameClient(gameConf, player)
 	err = gameClient.Run()
 	return
