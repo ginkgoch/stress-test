@@ -62,6 +62,7 @@ func (talent *TalentObject) Summary(httpClient *http.Client) error {
 		return err
 	}
 	if info.Success {
+		fmt.Println("get Summary success")
 		return nil
 	} else {
 		return fmt.Errorf("Get Summary failed, Info.Success=%v", info.Success)
@@ -177,6 +178,7 @@ func (talent *TalentObject) StartGame(gameId string, httpClient *http.Client) er
 		gameConfig.GameURL = startGameData.Data.Gameurl
 		gameConfig.RoomID = startGameData.Data.RoomID
 		talent.GameConfig = gameConfig
+		fmt.Println("get startGame success")
 	}
 
 	return err
@@ -209,6 +211,9 @@ func (talent *TalentObject) StopGame(gameId string, httpClient *http.Client) (er
 	}
 
 	err = templates.HttpGet(request, httpClient)
+	if err == nil {
+		fmt.Println("get stopGame success")
+	}
 	return
 }
 
@@ -226,6 +231,9 @@ func (talent *TalentObject) GameStatus(gameId string, httpClient *http.Client) (
 	}
 
 	err = templates.HttpGet(request, httpClient)
+	if err == nil {
+		fmt.Println("get gameStatus success")
+	}
 	return
 }
 

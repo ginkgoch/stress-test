@@ -251,6 +251,7 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 		}
 
 		if _, err = executeSingleStep(i, "get-game-status", talentObj, ch, func() error {
+			processDelayFix(90)
 			return talentObj.GameStatus(game, httpClient)
 		}); err != nil {
 			fmt.Println("get-game-status error:", err)
@@ -258,6 +259,7 @@ func executeSingleTask(user *talent.TalentObject, httpClient *http.Client, ch ch
 		}
 
 		if _, err = executeSingleStep(i, "summary", talentObj, ch, func() error {
+			processDelayFix(90)
 			return talentObj.Summary(httpClient)
 		}); err != nil {
 			fmt.Println("summary error:", err)
@@ -275,6 +277,11 @@ func processDelay() {
 		sleeping := delay + rand.Intn(1000)
 		time.Sleep(time.Duration(sleeping) * time.Millisecond)
 	}
+}
+
+func processDelayFix(delaytime int) {
+	sleeping := delaytime + rand.Intn(100)
+	time.Sleep(time.Duration(sleeping) * time.Millisecond)
 }
 
 func enqueueMetrics(name string, startTime *time.Time, err error, ch chan<- *runner.TaskResult) {

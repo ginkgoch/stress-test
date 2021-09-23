@@ -3,12 +3,10 @@ package game
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"sync"
-
 	"github.com/ginkgoch/stress-test/pkg/log"
 	"github.com/ginkgoch/stress-test/pkg/talent/lib"
-
+	"strconv"
+	"sync"
 	//"test/websocket"
 	"github.com/gorilla/websocket"
 )
@@ -204,7 +202,7 @@ func (ws *WebsocketClient) handshake() error {
 
 func (ws *WebsocketClient) handleMessage() {
 	for {
-		//err := ws.websocket.SetReadDeadline(time.Now().Add(30 * time.Second))
+		//err := ws.websocket.SetReadDeadline(time.Time{})
 		//if err != nil {
 		//	return
 		//}
